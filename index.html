@@ -1,0 +1,323 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Pamet — Discord Bot Hub</title>
+<meta name="description" content="Pamet — Discord bot directory. Avatar, banner, prefix, commands, uploads." />
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700;800&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#0b1220;--panel:#0f1724;--muted:#9fb0d6;--accent:#7289da}
+[data-theme="light"]{--bg:#f6f8ff;--panel:#fff;--muted:#445066;--accent:#4b6bff;color:#0b1220}
+*{box-sizing:border-box}html,body{height:100%;margin:0;font-family:Inter,system-ui,Arial;background:linear-gradient(180deg,var(--bg),#071026);color:#e6eef8;-webkit-font-smoothing:antialiased}
+.container{max-width:1200px;margin:0 auto;padding:20px}
+.header{display:flex;align-items:center;gap:12px}
+.logo{width:56px;height:56px;border-radius:12px;display:flex;align-items:center;justify-content:center;background:linear-gradient(135deg,var(--accent),#00d4ff);font-weight:800}
+.title h1{margin:0;font-size:18px}
+.title p{margin:4px 0 0;color:var(--muted);font-size:13px}
+.controls{display:flex;gap:8px;margin-top:12px;flex-wrap:wrap}
+.input,.select,.btn{padding:10px;border-radius:10px;border:0;background:var(--panel);color:inherit;min-width:140px}
+.input{flex:1}
+.main{display:flex;gap:14px;margin-top:14px}
+@media(max-width:900px){.main{flex-direction:column}}
+.sidebar{width:260px;background:linear-gradient(180deg,var(--panel),rgba(255,255,255,0.01));padding:12px;border-radius:12px}
+.grid{flex:1;display:grid;grid-template-columns:repeat(2,1fr);gap:12px}
+@media(min-width:1000px){.grid{grid-template-columns:repeat(3,1fr)}}
+.card{background:linear-gradient(180deg,var(--panel), rgba(255,255,255,0.02));padding:12px;border-radius:12px;display:flex;flex-direction:column;gap:8px;min-height:160px}
+.avatar{width:64px;height:64px;border-radius:12px;overflow:hidden;display:flex;align-items:center;justify-content:center}
+.avatar img{width:100%;height:100%;object-fit:cover}
+.banner-thumb{width:100%;height:80px;border-radius:8px;object-fit:cover;margin-top:8px}
+.bad{padding:6px 8px;border-radius:8px;background:rgba(255,255,255,0.03);font-weight:700}
+.actions{display:flex;gap:8px;margin-top:auto}
+.link{padding:8px 10px;border-radius:8px;background:transparent;color:var(--accent);cursor:pointer}
+.footer{margin-top:16px;color:var(--muted);display:flex;justify-content:space-between;flex-wrap:wrap}
+.modal{position:fixed;left:0;top:0;width:100%;height:100%;display:none;align-items:center;justify-content:center;background:rgba(2,6,23,0.6);z-index:40}
+.box{width:94%;max-width:980px;background:var(--panel);border-radius:12px;overflow:hidden}
+.m-banner{width:100%;height:180px;object-fit:cover}
+.cmd-list{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
+.cmd-item{padding:6px 10px;border-radius:8px;background:rgba(255,255,255,0.02)}
+.small{font-size:13px;color:var(--muted)}
+.note{font-size:13px;color:var(--muted);margin-top:8px}
+</style>
+</head>
+<body data-theme="dark">
+  <div class="container">
+    <div class="header">
+      <div class="logo">PAM</div>
+      <div class="title">
+        <h1>Pamet — Discord Bot Hub</h1>
+        <p>Real Top.gg data via server + user uploads (Supabase)</p>
+      </div>
+      <div style="margin-left:auto;display:flex;gap:8px">
+        <button class="btn" id="themeBtn">🌙</button>
+        <button class="btn" id="uploadBtn">Upload Bot</button>
+      </div>
+    </div>
+
+    <div class="controls">
+      <input id="q" class="input" placeholder="Search name/desc/tag; try: tag:music prefix:!" />
+      <select id="sort" class="select">
+        <option value="users">Most users</option>
+        <option value="commands">Most commands</option>
+        <option value="downloads">Most downloads</option>
+        <option value="alpha">A → Z</option>
+      </select>
+      <select id="tagFilter" class="select"><option value="">All tags</option></select>
+      <button class="btn" id="resetBtn">Reset</button>
+      <button class="btn" id="reloadBtn">Reload</button>
+      <div id="status" class="small" style="margin-left:8px"></div>
+    </div>
+
+    <div class="main">
+      <aside class="sidebar">
+        <div class="small">Directory</div>
+        <div style="font-weight:800;font-size:20px" id="statCount">0</div>
+        <div class="note">Shows Top.gg results + uploads. Use Upload to add your bot (auto-public).</div>
+      </aside>
+
+      <section style="flex:1">
+        <div id="results" class="grid"></div>
+        <div id="empty" class="small" style="display:none;padding:20px;background:rgba(255,255,255,0.02);border-radius:10px;margin-top:12px">No bots found</div>
+      </section>
+    </div>
+
+    <div class="footer">
+      <div>Made by <strong>ACN</strong> • Vercel + Supabase + Top.gg</div>
+      <div class="small">Keep TOPGG_TOKEN & SUPABASE_KEY secret in Vercel env</div>
+    </div>
+  </div>
+
+  <!-- Upload modal -->
+  <div id="uploadModal" class="modal"><div class="box" style="padding:12px">
+    <h3 style="margin:6px 0">Upload your bot</h3>
+    <div style="display:flex;gap:8px;flex-wrap:wrap">
+      <input id="u_name" placeholder="Bot name" style="padding:8px;border-radius:8px;background:var(--panel);border:0;flex:1"/>
+      <input id="u_prefix" placeholder="Prefix (e.g. !)" style="padding:8px;border-radius:8px;background:var(--panel);border:0;width:120px"/>
+    </div>
+    <div style="margin-top:8px;display:flex;gap:8px">
+      <input id="u_invite" placeholder="Invite URL" style="padding:8px;border-radius:8px;background:var(--panel);border:0;flex:1"/>
+      <input id="u_avatar" placeholder="Avatar URL" style="padding:8px;border-radius:8px;background:var(--panel);border:0;width:48%"/>
+    </div>
+    <div style="margin-top:8px"><textarea id="u_desc" rows="3" style="width:100%;padding:8px;border-radius:8px;background:var(--panel);border:0" placeholder="Short description"></textarea></div>
+    <div style="margin-top:8px;display:flex;gap:8px">
+      <input id="u_tags" placeholder="Tags comma separated" style="padding:8px;border-radius:8px;background:var(--panel);border:0;flex:1"/>
+      <input id="u_cmds" placeholder="Commands comma separated" style="padding:8px;border-radius:8px;background:var(--panel);border:0;flex:1"/>
+    </div>
+    <div style="margin-top:10px;display:flex;gap:8px">
+      <button class="btn" id="u_submit">Submit</button>
+      <button class="btn" onclick="closeUpload()">Cancel</button>
+      <div class="small" style="margin-left:auto">Uploads saved to Supabase</div>
+    </div>
+  </div></div>
+
+  <!-- Detail modal -->
+  <div id="detailModal" class="modal"><div class="box">
+    <img id="dBanner" class="m-banner" src="" style="display:none"/>
+    <div style="padding:12px">
+      <div style="display:flex;gap:12px;align-items:center">
+        <div id="dAvatar" class="avatar" style="width:92px;height:92px;font-size:28px">B</div>
+        <div style="flex:1">
+          <div style="display:flex;gap:8px;align-items:center"><h2 id="dName" style="margin:0"></h2><div id="dPrefix" class="small" style="padding:6px 8px;border-radius:8px;background:rgba(255,255,255,0.02)"></div></div>
+          <div id="dDesc" class="small" style="margin-top:8px;color:var(--muted)"></div>
+        </div>
+        <div style="text-align:right">
+          <div style="font-weight:800" id="dUsers">0</div><div class="small">users</div>
+        </div>
+      </div>
+
+      <div style="margin-top:12px;display:flex;gap:12px;flex-wrap:wrap">
+        <div style="min-width:200px"><div class="small">Commands</div><div id="dCmds" class="cmd-list"></div></div>
+        <div style="min-width:140px"><div class="small">Downloads</div><div id="dDl" style="font-weight:800">0</div></div>
+        <div style="min-width:160px"><div class="small">Tags</div><div id="dTags" style="margin-top:6px"></div></div>
+      </div>
+
+      <div style="margin-top:12px;display:flex;gap:8px">
+        <button class="link" id="dInvite" onclick="openInvite()">Invite</button>
+        <button class="link" onclick="copyInvite()">Copy Invite</button>
+        <div style="margin-left:auto"><button class="btn" onclick="closeDetail()">Close</button></div>
+      </div>
+    </div>
+  </div></div>
+
+<script>
+/* CONFIG - don't put secrets here. Frontend calls serverless endpoints on Vercel.
+   When you deploy to Vercel set environment variables:
+   - TOPGG_TOKEN (used in server)
+   - SUPABASE_URL, SUPABASE_KEY (service role or anon key)
+   - ADMIN_SECRET (optional)
+*/
+const API_BASE = '/api';
+
+const q = document.getElementById('q');
+const sortSel = document.getElementById('sort');
+const tagFilter = document.getElementById('tagFilter');
+const results = document.getElementById('results');
+const statCount = document.getElementById('statCount');
+const statusEl = document.getElementById('status');
+
+let bots = []; // merged (uploads first)
+
+function fmt(n){ if(n>=1e6) return (n/1e6).toFixed(1)+'M'; if(n>=1e3) return (n/1e3).toFixed(1)+'k'; return String(n||0); }
+function escapeHtml(s){ return String(s||'').replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('>','&gt;'); }
+
+async function fetchUploads(){
+  try{
+    const r = await fetch(API_BASE + '/uploads');
+    if(!r.ok) return [];
+    return await r.json();
+  }catch(e){ console.warn(e); return []; }
+}
+
+async function fetchTopPage(limit=100, page=0){
+  // page is zero-based offset
+  try{
+    const r = await fetch(API_BASE + `/bots?limit=${limit}&offset=${page*limit}`);
+    if(!r.ok) { throw new Error('bad'); }
+    return await r.json();
+  }catch(e){ console.warn('fetchTopPage',e); return []; }
+}
+
+/* Load sequence: load uploads, then load N pages from Top.gg progressively (client triggers)
+   For fast UX we'll fetch first page(s) and allow user to hit Reload to load more.
+*/
+async function loadData(pagesToLoad=4){ // default ~4*100 = 400 bots (adjust)
+  statusEl.textContent = 'loading uploads...';
+  const uploads = await fetchUploads();
+  statusEl.textContent = 'loading top.gg...';
+  let top = [];
+  // fetch given number of pages sequentially
+  for(let p=0;p<pagesToLoad;p++){
+    const page = await fetchTopPage(100, p);
+    top = top.concat(page);
+    statusEl.textContent = `loaded ${top.length} top.gg bots`;
+    await new Promise(r=>setTimeout(r, 300)); // polite
+  }
+  // normalize and merge (uploads first)
+  const normTop = normalize(top);
+  bots = (uploads || []).concat(normTop);
+  statusEl.textContent = `ready — ${bots.length} bots`;
+  afterLoad();
+}
+
+function normalize(arr){
+  return (arr||[]).map(b=>{
+    const id = b.id || b.client_id || b._id || ('u-'+Math.random().toString(36).slice(2,9));
+    const name = b.username || b.name || b.label || 'Bot '+id;
+    const prefix = b.prefix || b.bot?.prefix || '!';
+    const users = Number(b.servers || b.server_count || (b.stats && b.stats.server_count) || 0);
+    const commands = Number(b.commands_count || b.commands || 0);
+    const downloads = Number(b.downloads || 0);
+    const tags = b.tags || [];
+    const desc = b.shortdesc || b.description || b.summary || '';
+    const invite = b.invite || ('https://discord.com/oauth2/authorize?client_id='+id+'&scope=bot');
+    const avatar = b.avatar || b.icon || null;
+    const banner = b.banner || b.banner_url || null;
+    const commandsArray = Array.isArray(b.commands) ? b.commands : (b.commandsArray || []);
+    return { id, name, prefix, users, commands, downloads, tags, desc, invite, avatar, banner, commandsArray, uploadedAt: b.uploadedAt || null };
+  }).filter(x=>x && x.id);
+}
+
+function afterLoad(){
+  initFilters();
+  applyFilters();
+}
+
+function initFilters(){
+  const uniqueTags = Array.from(new Set(bots.flatMap(b=>b.tags||[]))).sort();
+  tagFilter.innerHTML = '<option value="">All tags</option>';
+  uniqueTags.forEach(t=>{ const o=document.createElement('option'); o.value=t; o.textContent=t; tagFilter.appendChild(o); });
+  statCount.textContent = bots.length;
+}
+
+function render(list){
+  results.innerHTML = '';
+  if(!list.length){ document.getElementById('empty').style.display='block'; return } else document.getElementById('empty').style.display='none';
+  for(const b of list){
+    const el = document.createElement('div'); el.className='card';
+    const avatarHtml = b.avatar ? `<img src="${escapeHtml(b.avatar)}" alt="avatar" onerror="this.style.display='none'">` : escapeHtml((b.name||'B')[0]);
+    const bannerThumb = b.banner ? `<img class="banner-thumb" src="${escapeHtml(b.banner)}" alt="banner" onerror="this.style.display='none'>` : '';
+    el.innerHTML = `<div style="display:flex;gap:12px;align-items:center"><div class="avatar">${avatarHtml}</div><div style="flex:1"><div style="display:flex;justify-content:space-between"><div><div style="font-weight:700">${escapeHtml(b.name)}</div><div class="small" style="margin-top:6px">${escapeHtml(b.desc||'')}</div></div><div style="text-align:right"><div style="font-weight:800">${fmt(b.users||0)}</div><div class="small">users</div></div></div></div></div>${bannerThumb}<div style="display:flex;gap:8px;margin-top:8px"><div class="bad">⚙ ${fmt(b.commands||0)} cmds</div><div class="bad">⬇ ${fmt(b.downloads||0)} dl</div><div class="bad">${escapeHtml(b.prefix||'-')}</div><div style="margin-left:auto">${(b.tags||[]).slice(0,3).map(t=>`<span style="font-size:12px;padding:6px 8px;border-radius:999px;background:rgba(255,255,255,0.03);margin-left:6px">${escapeHtml(t)}</span>`).join('')}</div></div><div style="display:flex;gap:8px;margin-top:8px"><button class="link" onclick="openDetail('${escapeHtml(b.id)}')">Details</button><button class="link" onclick="window.open('${escapeHtml(b.invite||'#')}','_blank')">Invite</button></div>`;
+    results.appendChild(el);
+  }
+}
+
+function applyFilters(){
+  let list = bots.slice();
+  const qv = q.value.trim().toLowerCase();
+  const tag = tagFilter.value;
+  if(qv){
+    const parts = qv.split(/\s+/);
+    list = list.filter(b => parts.every(p=>{
+      if(p.startsWith('prefix:')) return (b.prefix||'').toLowerCase() === p.split(':')[1];
+      if(p.startsWith('tag:')) return (b.tags||[]).includes(p.split(':')[1]);
+      return (b.name||'').toLowerCase().includes(p) || (b.desc||'').toLowerCase().includes(p) || (b.tags||[]).join(' ').includes(p);
+    }));
+  }
+  if(tag) list = list.filter(b=> (b.tags||[]).includes(tag));
+  const s = sortSel.value;
+  if(s==='users') list.sort((a,b)=>(b.users||0)-(a.users||0));
+  if(s==='commands') list.sort((a,b)=>(b.commands||0)-(a.commands||0));
+  if(s==='downloads') list.sort((a,b)=>(b.downloads||0)-(a.downloads||0));
+  if(s==='alpha') list.sort((a,b)=>(a.name||'').localeCompare(b.name||''));
+  render(list);
+}
+
+/* Detail modal */
+function openDetail(id){
+  const m = bots.find(x=>x.id==id); if(!m) return alert('Not found');
+  const av = document.getElementById('dAvatar'); av.innerHTML=''; if(m.avatar){ const img = document.createElement('img'); img.src=m.avatar; img.style.width='100%'; img.style.height='100%'; img.style.objectFit='cover'; img.onerror = ()=>{ av.textContent=(m.name||'?')[0]; }; av.appendChild(img); } else av.textContent=(m.name||'?')[0];
+  const banner = document.getElementById('dBanner'); if(m.banner){ banner.src=m.banner; banner.style.display='block'; } else banner.style.display='none';
+  document.getElementById('dName').textContent = m.name;
+  document.getElementById('dPrefix').textContent = m.prefix || '-';
+  document.getElementById('dDesc').textContent = m.desc || '';
+  document.getElementById('dUsers').textContent = fmt(m.users||0);
+  document.getElementById('dDl').textContent = fmt(m.downloads||0);
+  document.getElementById('dTags').innerHTML = (m.tags||[]).map(t=>`<span style="font-size:12px;padding:6px 8px;border-radius:999px;background:rgba(255,255,255,0.03);margin-right:6px">${escapeHtml(t)}</span>`).join('');
+  const cmdList = document.getElementById('dCmds'); cmdList.innerHTML=''; const cmdArr = (Array.isArray(m.commands) && m.commands.length)? m.commands : (m.commandsArray||['help','info','ping']); cmdArr.slice(0,24).forEach(c=>{ const n = document.createElement('div'); n.className='cmd-item'; n.textContent = (m.prefix||'') + c; cmdList.appendChild(n); });
+  document.getElementById('dInvite').setAttribute('data-invite', m.invite||'#');
+  document.getElementById('detailModal').style.display='flex';
+}
+function closeDetail(){ document.getElementById('detailModal').style.display='none'; }
+function openInvite(){ const u = document.getElementById('dInvite').getAttribute('data-invite'); if(u && u!=='#') window.open(u,'_blank'); }
+function copyInvite(){ navigator.clipboard?.writeText(document.getElementById('dInvite').getAttribute('data-invite')||'').then(()=>alert('Copied')); }
+
+/* Upload actions */
+document.getElementById('uploadBtn').addEventListener('click', ()=>{ document.getElementById('uploadModal').style.display='flex'; });
+function closeUpload(){ document.getElementById('uploadModal').style.display='none'; }
+document.getElementById('u_submit').addEventListener('click', async ()=>{
+  const payload = {
+    name: document.getElementById('u_name').value.trim(),
+    prefix: document.getElementById('u_prefix').value.trim() || '!',
+    invite: document.getElementById('u_invite').value.trim(),
+    avatar: document.getElementById('u_avatar').value.trim(),
+    desc: document.getElementById('u_desc').value.trim(),
+    tags: document.getElementById('u_tags').value.split(',').map(s=>s.trim()).filter(Boolean),
+    commands: document.getElementById('u_cmds').value.split(',').map(s=>s.trim()).filter(Boolean)
+  };
+  if(!payload.name) return alert('Name required');
+  try{
+    const headers = { 'Content-Type': 'application/json' };
+    // If you set ADMIN_SECRET, the server will expect it in x-admin-secret header
+    const adminSecret = localStorage.getItem('PAM_ADMIN_SECRET') || '';
+    if(adminSecret) headers['x-admin-secret'] = adminSecret;
+    const r = await fetch(API_BASE + '/uploads', { method:'POST', headers, body: JSON.stringify(payload) });
+    const j = await r.json();
+    if(r.ok && j.ok){ alert('Uploaded ✅'); closeUpload(); await loadData(); } else alert('Upload failed: ' + (j.error || r.status));
+  }catch(e){ console.error(e); alert('Upload error'); }
+});
+
+/* UI events */
+q.addEventListener('input', ()=>applyFilters());
+sortSel.addEventListener('change', ()=>applyFilters());
+tagFilter.addEventListener('change', ()=>applyFilters());
+document.getElementById('resetBtn').addEventListener('click', ()=>{ q.value=''; sortSel.value='users'; tagFilter.value=''; applyFilters(); });
+document.getElementById('reloadBtn').addEventListener('click', ()=>loadData(8)); // load more pages when user wants
+document.getElementById('themeBtn').addEventListener('click', ()=>{
+  const root=document.body; if(root.getAttribute('data-theme')==='light'){ root.setAttribute('data-theme','dark'); document.getElementById('themeBtn').textContent='🌙'; } else { root.setAttribute('data-theme','light'); document.getElementById('themeBtn').textContent='☀️'; }
+});
+
+/* Boot */
+loadData(4); // initial ~400 bots (4 pages * 100). Click Reload to load more.
+</script>
+</body>
+</html>
